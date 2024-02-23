@@ -9,18 +9,64 @@ from models import BertSentimentClassifier
 
 from tqdm import tqdm
 import os
+import argparse
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(description="Training arguments")
+    parser.add_argument(
+        "--train-csv-path",
+        help="path to training data csv file",
+        type=str,
+        required=True
+    )
+    parser.add_argument(
+        "--num-classes",
+        type=int,
+        required=True
+    )
+    parser.add_argument(
+        "--batch-size",
+        default=32,
+        type=int
+    )
+    parser.add_argument(
+        "--num-epochs",
+        default=100,
+        type=int
+    )
+    parser.add_argument(
+        "--device",
+        choices=["cuda", "cpu"],
+        default="cpu"
+    )
+    parser.add_argument(
+        "--save-dir",
+        default="runs/models"
+    )
+    parser.add_argument(
+        "--train-backbone",
+        type=bool,
+        default=False,
+        help="Whether to train the BERT model or only LM Head."
+    )
+    
+    args = parser.parse_args()
+    return args
+
 
 
 if __name__ == "__main__":
+    args = parse_arguments()
     
-    BATCH_SIZE = 32
-    NUM_EPOCHS = 100
-    NUM_CLASSES = 2
-    TRAIN_DATA_CSV_PATH = "/home/evobits/arham/data/bertData/train_data.csv"
+    BATCH_SIZE = args.batch_size
+    NUM_EPOCHS = args.num_epochs
+    NUM_CLASSES = args.num_classes
+    TRAIN_DATA_CSV_PATH = args.train_csv_path
     MODEL_PATH = "google-bert/bert-base-multilingual-cased"
-    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    DEVICE = args.device
     
-    SAVE_DIR = "runs/models"
+    SAVE_DIR = args.save_dir
     os.makedirs(SAVE_DIR, exist_ok=True)
     
     
@@ -36,7 +82,7 @@ if __name__ == "__main__":
     class_weights = torch.tensor([1,1.2], dtype=torch.float32).to(DEVICE)
     criterion = CrossEntropyLoss(weight=class_weights)
     
-    model = BertSentimentClassifier(num_classes=NUM_CLASSES, model_path=MODEL_PATH, freeze_bert=True)    
+    model = BertSentimentClassifier(num_classes=NUM_CLASSES, model_path=MODEL_PATH, freeze_bert=not args.train_backbone)    
     model.to(DEVICE)
     
     optimizer_params = [
